@@ -3,15 +3,15 @@ import prettytable as prettytable
 POPULATION_SIZE=9
 NUMB_OF_ELITE_SCHEDULES=1
 TOURNAMENT_SELECTION_SIZE=3
-MUTATION_RATE=0.1
+MUTATION_RATE=0.01
 
 class Data:
     ROOMS = [["R1" , 25],["R2" , 45], ["R3" , 35]]
     MEETING_TIMES = [["MT1", "MWF 09:00 - 10:00"],
                      ["MT2", "MWF 10:00 - 11:00"],
-                     ["MT3", "TTH 09:00 - 10:00"],
+                     ["MT3", "TTH 09:00 - 10:30"],
                      ["MT4", "TTH 10:30 - 12:00"]]
-    INSTRUCTORS = [["I1", "Dr James Brown"],
+    INSTRUCTORS = [["I1", "Dr James Web"],
                    ["I2", "Mr. Mike Brown"],
                    ["I3", "Dr Steve Day"],
                    ["I4", "Mrs Jane Doe"]]
@@ -27,7 +27,7 @@ class Data:
         course2 = Course("C2", "319K", [self._instructors[0], self._instructors[1], self._instructors[2]], 35)
         course3 = Course("C3", "462K", [self._instructors[0], self._instructors[1]], 25)
         course4 = Course("C4", "464K", [self._instructors[2], self._instructors[3]], 30)
-        course5 = Course("C5", "360K", [self._instructors[3]], 35)
+        course5 = Course("C5", "360C", [self._instructors[3]], 35)
         course6 = Course("C6", "303K", [self._instructors[0], self._instructors[2]], 45)
         course7 = Course("C7", "303L", [self._instructors[1], self._instructors[3]], 45)
         self._courses = [course1, course2, course3, course4, course5, course6, course7]
@@ -58,7 +58,7 @@ class Schedule:
         return self._classes
 
     def get_numbOfConflicts(self):
-        self._numberOfConflicts
+        return self._numberOfConflicts
 
     def get_fitness(self):
 
@@ -87,14 +87,14 @@ class Schedule:
         for i in range(0,len(classes)):
             if(classes[i].get_room().get_seatingCapacity() < classes[i].get_course().get_maxNumOfStudents()):
                 self._numberOfConflicts+=1
-            for j in range(0,len(classes)):
-                if(j>=i):
-                    if(classes[i].get_meetingTime() == classes[j].get_meetingTime() and classes[i].get_id() !=classes[j].get_id()):
-                        if(classes[i].get_room() == classes[j].get_room()):
-                            self._numberOfConflicts+=1
-                        if(classes[i].get_instructor() == classes[j].get_instructor()):
-                            self._numberOfConflicts+=1
-            return 1/(1.0*self._numberOfConflicts+1)
+                for j in range(0,len(classes)):
+                    if(j>=i):
+                        if(classes[i].get_meetingTime() == classes[j].get_meetingTime() and classes[i].get_id() !=classes[j].get_id()):
+                            if(classes[i].get_room() == classes[j].get_room()):
+                                self._numberOfConflicts+=1
+                            if(classes[i].get_instructor() == classes[j].get_instructor()):
+                                self._numberOfConflicts+=1
+            return 1/((1.0*self._numberOfConflicts+1.0))
     def __str__(self):
         returnValue=""
         for i in range(0,len(self._classes)-1):
@@ -116,7 +116,7 @@ class GeneticAlgo:
     def evolve(self, population): 
         return self._mutate_population(self._crossover_population(population))
     
-    def crossover_population(self,pop):
+    def _crossover_population(self,pop):
         crossover_pop = Population(0)
         for i in range(NUMB_OF_ELITE_SCHEDULES):
             crossover_pop.get_schedules().append(pop.get_schedules()[i])
@@ -124,7 +124,7 @@ class GeneticAlgo:
         while i < POPULATION_SIZE:
             schedule1 = self._select_tournament_population(pop).get_schedules()[0]
             schedule2 = self._select_tournament_population(pop).get_schedules()[0]
-            crossover_pop.get_schedules().append(self._crossover_schedulele(schedule1,schedule2))
+            crossover_pop.get_schedules().append(self._crossover_schedule(schedule1,schedule2))
             i+=1
         return crossover_pop
     
@@ -133,13 +133,13 @@ class GeneticAlgo:
             self._mutate_schedule(population.get_schedules()[i])
         return population
 
-    def _crossover_scheule(self, schedule1, schedule2):
+    def _crossover_schedule(self, schedule1, schedule2):
 
         crossoverSchedule = Schedule().initialize()
-        for i in range(O,len(crossoverSchedule.get_classes())):
+        for i in range(0,len(crossoverSchedule.get_classes())):
             if (rnd.random()>0.5): crossoverSchedule.get_classes()[i] = schedule1.get_classes()[i]
             else: crossoverSchedule.get_classes()[i] =schedule2.get_classes()[i]
-        return crossoverScheduIe
+        return crossoverSchedule
 
     def _mutate_schedule(self, mutateSchedule):
     
@@ -304,7 +304,7 @@ class DisplayMgr:
         table1=prettytable.PrettyTable(['schedule #','fitness','# of conflicts','classes[dept,class,room,instructor]'])
         schedules=population.get_schedules()
         for i in range(0,len(schedules)):
-            table1.add_row([str(i),round(schedules[i].get_fitness(),3),schedules[i].get_numbOfConflicts(),schedules[i] ])
+            table1.add_row([str(i),round(schedules[i].get_fitness(),3),str(schedules[i].get_numbOfConflicts()),schedules[i] ])
         print(table1)
     def print_schedule_as_table(self,schedule):
         classes=schedule.get_classes()
@@ -317,7 +317,7 @@ class DisplayMgr:
             classes[i].get_instructor().get_name()+" ("+ str(classes[i].get_instructor().get_id())+")",
             classes[i].get_meetingTime().get_time()+" ("+str(classes[i].get_meetingTime().get_id())+")"
             ])
-
+        print(table)
 
 
 
@@ -331,6 +331,17 @@ population=Population(POPULATION_SIZE)
 population.get_schedules().sort(key=lambda x: x.get_fitness(),reverse=True)
 displayMgr.print_generation(population)
 displayMgr.print_schedule_as_table(population.get_schedules()[0])
+geneticAlgorithm=GeneticAlgo()
+
+while(population.get_schedules()[0].get_fitness() != 1.0):
+    generationNumber+=1
+    print('\n>Generation $'+str(generationNumber))
+    population=geneticAlgorithm.evolve(population)
+    population.get_schedules().sort(key=lambda x:x.get_fitness(),reverse=True)
+    displayMgr.print_generation(population)
+    displayMgr.print_schedule_as_table(population.get_schedules()[0])
+
+print("\n\n")
 
 
         
